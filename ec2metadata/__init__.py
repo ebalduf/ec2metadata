@@ -8,8 +8,7 @@
 # option) any later version.
 #
 import time
-import urllib
-import socket
+import requests
 
 METAOPTS = ['ami-id', 'ami-launch-index', 'ami-manifest-path',
             'ancestor-ami-id', 'availability-zone', 'block-device-mapping',
@@ -33,24 +32,23 @@ class EC2Metadata:
 
     @staticmethod
     def _test_connectivity(addr, port):
-        for i in range(6):
-            s = socket.socket()
-            try:
-                s.connect((addr, port))
-                s.close()
-                return True
-            except socket.error, e:
-                time.sleep(1)
+        try:
+          r = requests.get(('http://%s:%s/' % (addr, port)), timeout=6)
+          r.raise_for_status()
+        except Exception as e:
+          return False
 
-        return False
+        return True
 
     def _get(self, uri):
         url = 'http://%s/%s/%s' % (self.addr, self.api, uri)
-        value = urllib.urlopen(url).read()
-        if "404 - Not Found" in value:
+        try:
+          r = requests.get(url, timeout=6)
+          r.raise_for_status()
+        except:
             return None
 
-        return value
+        return r.text
 
     def get(self, metaopt):
         """return value of metaopt"""
